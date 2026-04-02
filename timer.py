@@ -4,12 +4,11 @@
 
 import time
 
-
 class CountdownTimer:
     """
     Timer simples com janela final configurável.
     """
-
+    
     def __init__(self, duration_seconds: float = 3.0, final_window_seconds: float = 0.5):
         self.duration_seconds = float(duration_seconds)
         self.final_window_seconds = float(final_window_seconds)
