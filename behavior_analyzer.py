@@ -4,13 +4,6 @@
 # Mecanismo adaptativo para análise de padrões comportamentais do jogador.
 # Identifica sequências e tendências nas jogadas para melhorar predições.
 #
-# Funcionalidades:
-# - Registro de histórico de jogadas
-# - Análise de transições entre gestos (matriz de Markov)
-# - Detecção de padrões sequenciais
-# - Identificação de viés comportamental
-# - Ajuste adaptativo de probabilidades
-#
 # Alberto Seleto de Souza / Marcos Alcino Ribeiro Cussioli
 # =============================================================================
 
@@ -32,7 +25,7 @@ class GestureClass(Enum):
     UNKNOWN = -1
 
     @staticmethod
-    def from_string(s: str) 'GestureClass':
+    def from_string(s: str) -> 'GestureClass':
         s = s.upper()
         if 'PEDRA' in s or 'ROCK' in s:
             return GestureClass.ROCK
@@ -43,7 +36,7 @@ class GestureClass(Enum):
         return GestureClass.UNKNOWN
 
     @staticmethod
-    def from_int(i: int) 'GestureClass':
+    def from_int(i: int) -> 'GestureClass':
         if i == 0:
             return GestureClass.ROCK
         if i == 1:
