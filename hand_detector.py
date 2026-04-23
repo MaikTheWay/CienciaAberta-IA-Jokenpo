@@ -1,5 +1,8 @@
-# Usa MediaPipe Hands para localizar pontos de referência da mão no frame da câmera.
-# Retorna True quando uma mão é detectada e está em posição adequada (ex: aberta, visível).
+# =============================================================================
+# hand_detector.py
+# =============================================================================
+# Usa MediaPipe Hands para localizar pontos de referência da mão.
+# =============================================================================
 
 import cv2
 import mediapipe as mp
@@ -10,7 +13,6 @@ from typing import List, Optional, Tuple, Any
 class HandDetectionResult:
     visible: bool
     landmarks: List[Tuple[float, float, float]]
-    flat_landmarks: List[float]
     handedness: Optional[str]
     annotated_frame: Any
 
@@ -39,7 +41,6 @@ class HandDetector:
         results = self.hands.process(img_rgb)
 
         landmarks: List[Tuple[float, float, float]] = []
-        flat_landmarks: List[float] = []
         handedness: Optional[str] = None
         visible = False
 
@@ -51,9 +52,7 @@ class HandDetector:
 
             hand_lms = results.multi_hand_landmarks[0]
             for lm in hand_lms.landmark:
-                x, y, z = lm.x, lm.y, lm.z
-                landmarks.append((x, y, z))
-                flat_landmarks.extend([x, y, z])
+                landmarks.append((lm.x, lm.y, lm.z))
 
             self.mp_draw.draw_landmarks(
                 frame,
@@ -64,7 +63,6 @@ class HandDetector:
         return HandDetectionResult(
             visible=visible,
             landmarks=landmarks,
-            flat_landmarks=flat_landmarks,
             handedness=handedness,
             annotated_frame=frame,
         )
