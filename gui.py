@@ -186,15 +186,17 @@ class MedievalJokenpoGUI:
             width=3,
             fill="#1a1233",
         )
-        self.score_title_item = self.canvas.create_image(score_x + score_w // 2, score_y + 18, anchor="center")
-        self.score_item = self.canvas.create_image(score_x + score_w // 2, score_y + 50, anchor="center")
+        # Ajuste fino da centralização do placar
+        score_center_x = score_x + score_w // 2
+        self.score_title_item = self.canvas.create_image(score_center_x, score_y + 24, anchor="center")
+        self.score_item = self.canvas.create_image(score_center_x, score_y + 60, anchor="center")
 
         # Layout ajustado para centralizar elementos
-        self.dialog_main_item = self.canvas.create_image(dia_x + dia_w // 2, dia_y + 42, anchor="center")
-        self.dialog_sub_item = self.canvas.create_image(dia_x + dia_w // 2, dia_y + 102, anchor="center")
-        self.dialog_emphasis_item = self.canvas.create_image(dia_x + dia_w // 2, dia_y + dia_h // 2 + 8, anchor="center")
-        self.dialog_move_item = self.canvas.create_image(dia_x + dia_w // 2, dia_y + 84, anchor="center")
-        self.spell_item = self.canvas.create_image(dia_x + dia_w // 2, dia_y + 12, anchor="center")
+        self.dialog_main_item = self.canvas.create_image(dia_x + dia_w // 2, dia_y + 70, anchor="center")
+        self.dialog_sub_item = self.canvas.create_image(dia_x + dia_w // 2, dia_y + 150, anchor="center")
+        self.dialog_emphasis_item = self.canvas.create_image(dia_x + dia_w // 2, dia_y + dia_h // 2, anchor="center")
+        self.dialog_move_item = self.canvas.create_image(dia_x + dia_w // 2, dia_y + dia_h // 2, anchor="center")
+        self.spell_item = self.canvas.create_image(dia_x + dia_w // 2, dia_y + dia_h // 2, anchor="center")
         self.dialog_move_photo = None
         self.spell_photo = None
 
@@ -337,37 +339,37 @@ class MedievalJokenpoGUI:
         max_height: int = 150,
         align: str = "left",
         line_spacing: int = 4,
-        padding: Tuple[int, int] = (2, 2),
+        padding: Tuple[int, int] = (10, 10),
         min_size: Optional[Tuple[int, int]] = None,
     ) -> ImageTk.PhotoImage:
+        if not text or text.strip() == "":
+            text = " "
         font = self._load_font(font_size)
         dummy = Image.new("RGBA", (1, 1))
         draw = ImageDraw.Draw(dummy)
         
-        # Margem de segurança para evitar corte
-        safe_margin = 10
-        
+        # Obter o bounding box exato do texto
         bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=line_spacing, align=align)
         tw = bbox[2] - bbox[0]
-        th = bbox[3] - bbox[1] + safe_margin
+        th = bbox[3] - bbox[1]
 
-        canvas_w = max(tw + padding[0] * 2, min_size[0] if min_size else 0)
-        canvas_h = max(th + padding[1] * 2, min_size[1] if min_size else 0)
+        # Fontes FreeType podem ter descendentes que ultrapassam o bbox
+        # Adicionamos uma margem de segurança baseada no tamanho da fonte
+        safety_margin = font_size // 3
+        
+        canvas_w = max(tw + padding[0] * 2 + safety_margin, min_size[0] if min_size else 0)
+        canvas_h = max(th + padding[1] * 2 + safety_margin, min_size[1] if min_size else 0)
         
         canvas_w = min(canvas_w, max_width)
-        canvas_h = max(canvas_h, min(max_height, canvas_h))
+        canvas_h = min(canvas_h, max_height)
 
         img = Image.new("RGBA", (int(canvas_w), int(canvas_h)), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
-        if align == "center":
-            tx = (canvas_w - tw) / 2
-        elif align == "right":
-            tx = canvas_w - tw - padding[0]
-        else:
-            tx = padding[0]
+        # Centralização precisa considerando o deslocamento do bbox (âncora)
+        tx = (canvas_w - tw) / 2 - bbox[0]
+        ty = (canvas_h - th) / 2 - bbox[1]
         
-        ty = padding[1]
         draw.multiline_text((tx, ty), text, font=font, fill=fill, spacing=line_spacing, align=align)
         return ImageTk.PhotoImage(img)
 
@@ -430,16 +432,22 @@ class MedievalJokenpoGUI:
             total_h += line_h + line_spacing
 
         total_h = max(1, total_h - line_spacing)
-        canvas_w = max(120, min(max_width, max_line_w + padding[0] * 2 + 8))
-        canvas_h = max(40, min(max_height, total_h + padding[1] * 2 + 8))
+
+        # Adicionamos uma margem de segurança extra para evitar cortes
+        safety_margin = font_size // 3
+        canvas_w = max(120, min(max_width, max_line_w + padding[0] * 2 + safety_margin))
+        canvas_h = max(40, min(max_height, total_h + padding[1] * 2 + safety_margin))
 
         img = Image.new('RGBA', (int(canvas_w), int(canvas_h)), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
         now = time.time()
+        
+        # Centralização vertical
         y = (canvas_h - total_h) / 2
         hue_shift = (now * 120.0) % 360.0
 
         for line_w, line_h, chars in line_metrics:
+            # Centralização horizontal por linha
             x = (canvas_w - line_w) / 2
             for idx, (ch, cw, ch_h) in enumerate(chars):
                 if mode == 'rainbow':
@@ -450,7 +458,11 @@ class MedievalJokenpoGUI:
                     fill = (255, 40, 40, 255) if int(now * 4) % 2 == 0 else (120, 0, 0, 255)
                 else:
                     fill = (255, 152, 0, 255)
-                draw.text((x, y), ch, font=font, fill=fill)
+                
+                # Usamos anchor='la' (left, ascender) para melhor controle de alinhamento
+                # O y é ajustado para centralizar com base na altura da linha
+                char_y = y + (line_h - ch_h) / 2
+                draw.text((x, char_y), ch, font=font, fill=fill)
                 x += cw
             y += line_h + line_spacing
 
@@ -605,10 +617,8 @@ class MedievalJokenpoGUI:
             return (main_text, sub_text, emph, "white", "#d6e9ff", "#fff3a0", None)
 
         if state == GameState.COUNTDOWN:
-            # Durante o timer, apenas o número centralizado
             return ("", "", f"{timer_text}", "#ff2b2b", "#ff2b2b", "#ff2b2b", None)
 
-        # RESULTADO: mensagem grande e visual de RPG.
         if "JOGADOR VENCEU" in result:
             emph = "Você vençeu! Meus parabéns!"
             color = "#8cff94"
@@ -634,36 +644,36 @@ class MedievalJokenpoGUI:
             main_text,
             font_size=30,
             fill=self.dialog_target_main_color,
-            max_width=self.DIALOG_BOX[2] - 80,
-            max_height=120,
+            max_width=self.DIALOG_BOX[2] - 40,
+            max_height=100,
             align="center",
             line_spacing=5,
-            padding=(8, 6),
-            min_size=(self.DIALOG_BOX[2] - 100, 40),
+            padding=(10, 10),
+            min_size=(self.DIALOG_BOX[2] - 60, 40),
         )
         sub_photo = self._render_text_photo(
             sub_text,
             font_size=24,
             fill=self.dialog_target_sub_color,
-            max_width=self.DIALOG_BOX[2] - 80,
-            max_height=95,
+            max_width=self.DIALOG_BOX[2] - 40,
+            max_height=80,
             align="center",
             line_spacing=4,
-            padding=(8, 4),
-            min_size=(self.DIALOG_BOX[2] - 100, 32),
+            padding=(10, 10),
+            min_size=(self.DIALOG_BOX[2] - 60, 32),
         )
 
         # Fonte do timer/ênfase muito maior quando centralizado
         if emph_text in ["3", "2", "1", "JÁ!"]:
             emph_photo = self._render_text_photo(
                 emph_text,
-                font_size=112,
+                font_size=160,  # Aumentado para preencher melhor o box
                 fill="#ff1e1e",
-                max_width=self.DIALOG_BOX[2] - 50,
-                max_height=190,
+                max_width=self.DIALOG_BOX[2],
+                max_height=self.DIALOG_BOX[3],
                 align="center",
-                padding=(4, 0),
-                min_size=(180, 90),
+                padding=(0, 0),
+                min_size=(self.DIALOG_BOX[2], self.DIALOG_BOX[3]),
             )
         elif self.result_phase == "dialog" and emph_text:
             if self.result_message_kind == "win":
@@ -713,7 +723,7 @@ class MedievalJokenpoGUI:
             font_size=24,
             fill="#f4f4f4",
             align="center",
-            padding=(6, 2),
+            padding=(2, 2),
             min_size=(160, 28),
         )
         score_text = f"VOCÊ: {stats['player_wins']}  |  MAGO: {stats['ai_wins']}  |  EMPATES: {stats['draws']}"
@@ -722,7 +732,7 @@ class MedievalJokenpoGUI:
             font_size=24,
             fill="#ffffff",
             align="center",
-            padding=(6, 2),
+            padding=(2, 2),
             min_size=(self.SCORE_BOX[2] - 20, 34),
         )
 
@@ -793,10 +803,9 @@ class MedievalJokenpoGUI:
             self.canvas.itemconfig(self.spell_item, image=spell_photo)
 
             move_center_x = dia_x + dia_w // 2
-            move_center_y = dia_y + 86
-            spell_center_y = move_center_y - 68
+            move_center_y = dia_y + dia_h // 2
             self.canvas.coords(self.dialog_move_item, move_center_x, move_center_y)
-            self.canvas.coords(self.spell_item, move_center_x, spell_center_y)
+            self.canvas.coords(self.spell_item, move_center_x, move_center_y)
 
     def _update_dialog_cycle(self, snapshot, hand_visible: bool) -> None:
         state = snapshot["state"]
