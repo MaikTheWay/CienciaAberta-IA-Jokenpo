@@ -438,16 +438,17 @@ class MedievalJokenpoGUI:
 
         total_h = max(1, total_h - line_spacing)
 
-        # Adicionamos uma margem de segurança extra para evitar cortes
-        safety_margin = font_size // 3
-        canvas_w = max(120, min(max_width, max_line_w + padding[0] * 2 + safety_margin))
-        canvas_h = max(40, min(max_height, total_h + padding[1] * 2 + safety_margin))
+        # Aumentamos a margem de segurança para evitar cortes de caracteres com partes superiores ou inferiores longas
+        safety_margin_w = font_size // 2
+        safety_margin_h = font_size // 2
+        canvas_w = max(120, min(max_width, max_line_w + padding[0] * 2 + safety_margin_w))
+        canvas_h = max(40, min(max_height, total_h + padding[1] * 2 + safety_margin_h))
 
         img = Image.new('RGBA', (int(canvas_w), int(canvas_h)), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
         now = time.time()
         
-        # Centralização vertical
+        # Centralização vertical precisa no novo canvas maior
         y = (canvas_h - total_h) / 2
         hue_shift = (now * 120.0) % 360.0
 
@@ -464,9 +465,12 @@ class MedievalJokenpoGUI:
                 else:
                     fill = (255, 152, 0, 255)
                 
-                # Usamos anchor='la' (left, ascender) para melhor controle de alinhamento
-                # O y é ajustado para centralizar com base na altura da linha
-                char_y = y + (line_h - ch_h) / 2
+                # Usamos o bounding box do caractere para garantir que ele não seja cortado
+                ch_bbox = draw.textbbox((0, 0), ch, font=font)
+                ch_offset_y = ch_bbox[1] # Deslocamento vertical natural da fonte
+                
+                # Ajuste de y para centralizar o caractere na linha respeitando seu desenho
+                char_y = y + (line_h - (ch_bbox[3] - ch_bbox[1])) / 2 - ch_offset_y
                 draw.text((x, char_y), ch, font=font, fill=fill)
                 x += cw
             y += line_h + line_spacing
