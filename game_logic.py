@@ -11,6 +11,7 @@ from typing import Optional, Dict, Any
 from timer import CountdownTimer
 from predictor import Predictor
 from gesture_classifier import BrainJokenpo
+from game_modes import GameModeManager, GameMode
 
 
 class GameState(Enum):
@@ -59,6 +60,9 @@ class GameLogic:
             classifier=self.classifier,
             window_seconds=final_window_seconds
         )
+        
+        # Gerenciador de modos de jogo (Arquitetura Limpa)
+        self.mode_manager = GameModeManager()
 
         self.state = GameState.WAIT_HAND
         self.player_move = "INDEFINIDO"
@@ -74,6 +78,19 @@ class GameLogic:
         self.player_wins = 0
         self.ai_wins = 0
         self.draws = 0
+
+    def set_game_mode(self, mode_index: int):
+        """
+        Define o modo de jogo manualmente (1: IA Dominante, 2: Jogador Favorável, 3: Aleatório).
+        Este método é chamado via entrada de teclado.
+        """
+        mapping = {
+            1: GameMode.DOMINANT_IA,
+            2: GameMode.PLAYER_FAVORABLE,
+            3: GameMode.RANDOM
+        }
+        if mode_index in mapping:
+            self.mode_manager.set_mode(mapping[mode_index])
 
     def reset_round(self):
         """Reseta o estado para uma nova rodada."""
@@ -126,12 +143,18 @@ class GameLogic:
 
     def _finalize_round(self):
         """Finaliza a rodada e determina o resultado."""
+        # 1. Identifica a jogada real do jogador (preservando a lógica original)
         classe_final, _ = self.predictor.predict_final()
         self.player_move = self.classifier.label_to_text(classe_final)
 
-        counter, _, _ = self.predictor.get_counter_move(classe_final)
-        self.ai_move = self.classifier.label_to_text(counter)
+        # 2. A atualização automática silenciosa agora só ocorre se o modo for RANDOM ou não tiver sido definido manualmente
+        # (Para manter o controle do usuário via teclas 1, 2, 3 durante a sessão)
+        # self._update_game_mode_silently() 
 
+        # 3. Determina a jogada da IA baseada no modo atual (Arquitetura Modular)
+        self.ai_move = self.mode_manager.get_ai_move(self.player_move)
+
+        # 4. Calcula o resultado final
         self.result = result_game(self.player_move, self.ai_move)
 
         self.total_rounds += 1
@@ -158,6 +181,23 @@ class GameLogic:
             "stats": self.get_statistics(),
         }
 
+    def _update_game_mode_silently(self):
+        """
+        Altera o modo de jogo internamente sem aviso visual.
+        Lógica: 
+        - 40% de chance para IA Dominante
+        - 30% de chance para Jogador Favorable
+        - 30% de chance para Aleatório
+        """
+        import random
+        rand = random.random()
+        if rand < 0.4:
+            self.mode_manager.set_mode(GameMode.DOMINANT_IA)
+        elif rand < 0.7:
+            self.mode_manager.set_mode(GameMode.PLAYER_FAVORABLE)
+        else:
+            self.mode_manager.set_mode(GameMode.RANDOM)
+
     def get_statistics(self) -> Dict[str, Any]:
         """Retorna estatísticas do jogo."""
         total = self.total_rounds if self.total_rounds > 0 else 1
@@ -168,4 +208,5 @@ class GameLogic:
             "draws": self.draws,
             "player_win_rate": self.player_wins / total * 100,
             "ai_win_rate": self.ai_wins / total * 100,
+            "current_mode": self.mode_manager.current_mode.name # Para debug interno se necessário
         }

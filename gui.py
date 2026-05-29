@@ -106,6 +106,11 @@ class MedievalJokenpoGUI:
         self.root.bind("<Escape>", lambda _e: self.close())
         self.root.bind("r", lambda _e: self.reset_round())
         self.root.bind("R", lambda _e: self.reset_round())
+        
+        # Atalhos para mudança de modo de jogo (Silencioso)
+        self.root.bind("1", lambda _e: self.game.set_game_mode(1))
+        self.root.bind("2", lambda _e: self.game.set_game_mode(2))
+        self.root.bind("3", lambda _e: self.game.set_game_mode(3))
 
         self.bg_image = self._load_background()
         self.bg_photo = ImageTk.PhotoImage(self.bg_image)
